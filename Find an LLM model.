@@ -1,0 +1,28 @@
+import tensorflow as tf
+from tensorflow.keras import layers, models
+
+def create_transformer_model(input_shape, num_heads, ff_dim, num_layers):
+    inputs = layers.Input(shape=input_shape)
+    
+    x = inputs
+    for _ in range(num_layers):
+        attention_output = layers.MultiHeadAttention(num_heads=num_heads, key_dim=ff_dim)(x, x)
+        x = layers.LayerNormalization(epsilon=1e-6)(x + attention_output)  # Residual connection
+        
+        ff_output = layers.Dense(ff_dim, activation='gelu')(x)
+        ff_output = layers.Dense(input_shape[-1])(ff_output)  # Output dimension same as input
+        x = layers.LayerNormalization(epsilon=1e-6)(x + ff_output)  # Residual connection
+
+    outputs = layers.Dense(input_shape[-1], activation='softmax')(x)  # Output layer
+    model = models.Model(inputs=inputs, outputs=outputs)
+    
+    return model
+
+if __name__ == "__main__":
+    input_shape = (None, 128)  # Sequence length of 128
+    num_heads = 8
+    ff_dim = 64
+    num_layers = 4
+    
+    transformer_model = create_transformer_model(input_shape, num_heads, ff_dim, num_layers)
+    transformer_model.summary()
